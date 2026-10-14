@@ -1,10 +1,31 @@
-# api vehiculo iot - amazon rds
+# API IoT - Sistema de Gestión y Monitoreo de Vehículos (Amazon RDS & FastAPI)
 
-api desarrollada en python con fastapi bajo programacion orientada a objetos, conectada a amazon rds (`vehiculo_iot`) integrando 21 stored procedures y comunicacion en tiempo real mediante websocket.
+Repositorio oficial del proyecto de desarrollo de una API backend en Python utilizando **FastAPI**, **Programación Orientada a Objetos (POO)** y **Amazon RDS (MySQL)**, implementando 21 Procedimientos Almacenados y comunicación en tiempo real mediante **WebSockets**.
 
-## ejecucion local
+---
 
-1. crear y activar entorno virtual:
+##  Características Principales
+- **Arquitectura Modular (POO):** Separación estricta de responsabilidades en capas (`database`, `schemas`, `repositories`, `services`, `websocket_manager`).
+- **Integración con Amazon RDS:** Conexión segura mediante variables de entorno y soporte para transacciones atómicas.
+- **Cobertura de 21 Stored Procedures:** Operaciones CRUD completas y transaccionales para Vehículos, Comandos, Estado, Historial, DEMOs y Movimientos de DEMO.
+- **Comunicación en Tiempo Real (WebSocket):** Transmisión de eventos de comandos individuales y secuencias de DEMO concurrentes sin afectar el historial en base de datos.
+- **Documentación Interactiva:** Integración nativa con **Swagger UI** (`/docs`).
+
+---
+
+##  Tecnologías Utilizadas
+- **Python 3.10+**
+- **FastAPI** 
+- **PyMySQL** 
+- **Pydantic** 
+- **Uvicorn** 
+- **Git & GitHub** 
+
+---
+
+##  Instrucciones de Ejecución Local
+
+### 1. Clonar el Repositorio
 ```bash
-python -m venv .venv
-.venv\scripts\activate
+git clone [https://github.com/andres0524E/api-vehiculo-iot.git](https://github.com/andres0524E/api-vehiculo-iot.git)
+cd api-vehiculo-iot
