@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitoreo WebSocket - Vehículo IoT</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h2 { color: #4ec9b0; }
+        #log { background: #252526; border: 1px solid #3c3c3c; padding: 15px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 14px; }
+        .evento { margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Monitoreo WebSocket Vehículo #1</h2>
+    <p>Estado de la conexión: <span id="estado" style="color: orange;">Conectando...</span></p>
+    <div id="log"></div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const estadoSpan = document.getElementById('estado');
+        const ws = new WebSocket('ws://localhost:8000/ws/vehiculos/1');
+
+        ws.onopen = function() {
+            estadoSpan.innerText = 'Conectado';
+            estadoSpan.style.color = 'lightgreen';
+            logDiv.innerHTML += '<div class="evento" style="color: lightgreen;">[CONEXIÓN ESTABLECIDA]</div>';
+        };
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            let color = '#d4d4d4';
+            if (data.evento === 'demo_inicio') color = '#569cd6';
+            else if (data.evento === 'demo_movimiento') color = '#ce9178';
+            else if (data.evento === 'demo_fin') color = '#b5cea8';
+            
+            logDiv.innerHTML += `<div class="evento" style="color: ${color};">[${data.timestamp}] Evento: <b>${data.evento}</b> => ${JSON.stringify(data)}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+
+        ws.onclose = function() {
+            estadoSpan.innerText = 'Desconectado';
+            estadoSpan.style.color = 'red';
+            logDiv.innerHTML += '<div class="evento" style="color: red;">[CONEXIÓN CERRADA]</div>';
+        };
+    </script>
+</body>
+</html>
