@@ -1,47 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Monitoreo WebSocket - Vehículo IoT</title>
+    <meta charset="utf-8">
+    <title>monitoreo wss dual - vehiculo iot</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
-        h2 { color: #4ec9b0; }
-        #log { background: #252526; border: 1px solid #3c3c3c; padding: 15px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 14px; }
-        .evento { margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        body { font-family: arial, sans-serif; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h2 { color: #4ec9b0; margin-bottom: 5px; }
+        .controles { background: #252526; padding: 12px; border: 1px solid #3c3c3c; margin-bottom: 15px; border-radius: 6px; }
+        input, button { padding: 6px 10px; background: #3c3c3c; color: #fff; border: 1px solid #555; border-radius: 4px; }
+        button { cursor: pointer; background: #0e639c; }
+        button:hover { background: #1177bb; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .panel { background: #252526; border: 1px solid #3c3c3c; padding: 12px; border-radius: 6px; }
+        .log { background: #1a1a1a; border: 1px solid #333; padding: 10px; height: 360px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+        .evento { margin-bottom: 8px; border-bottom: 1px solid #2d2d2d; padding-bottom: 4px; word-break: break-all; }
     </style>
 </head>
 <body>
-    <h2>Monitoreo WebSocket Vehículo #1</h2>
-    <p>Estado de la conexión: <span id="estado" style="color: orange;">Conectando...</span></p>
-    <div id="log"></div>
+    <h2>monitoreo websocket seguro (wss) - examen 2.6</h2>
+    <div class="controles">
+        <label>url base ws/wss: </label>
+        <input type="text" id="url_base" style="width: 320px;" value="">
+        <button onclick="iniciar_conexiones()">conectar / reconectar ambos clientes</button>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h3>cliente wss #1 (vehiculo <input type="number" id="veh_1" value="1" style="width: 50px;">)</h3>
+            <p>estado: <span id="estado_1" style="color: orange;">conectando...</span></p>
+            <div id="log_1" class="log"></div>
+        </div>
+
+        <div class="panel">
+            <h3>cliente wss #2 (vehiculo <input type="number" id="veh_2" value="1" style="width: 50px;">)</h3>
+            <p>estado: <span id="estado_2" style="color: orange;">conectando...</span></p>
+            <div id="log_2" class="log"></div>
+        </div>
+    </div>
 
     <script>
-        const logDiv = document.getElementById('log');
-        const estadoSpan = document.getElementById('estado');
-        const ws = new WebSocket('ws://localhost:8000/ws/vehiculos/1');
+        const protocolo_defecto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host_defecto = window.location.host ? `${protocolo_defecto}//${window.location.host}` : 'ws://localhost:8000';
+        document.getElementById('url_base').value = host_defecto;
 
-        ws.onopen = function() {
-            estadoSpan.innerText = 'Conectado';
-            estadoSpan.style.color = 'lightgreen';
-            logDiv.innerHTML += '<div class="evento" style="color: lightgreen;">[CONEXIÓN ESTABLECIDA]</div>';
-        };
+        let sockets = { 1: null, 2: null };
+        let timers_reconexion = { 1: null, 2: null };
 
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            let color = '#d4d4d4';
-            if (data.evento === 'demo_inicio') color = '#569cd6';
-            else if (data.evento === 'demo_movimiento') color = '#ce9178';
-            else if (data.evento === 'demo_fin') color = '#b5cea8';
-            
-            logDiv.innerHTML += `<div class="evento" style="color: ${color};">[${data.timestamp}] Evento: <b>${data.evento}</b> => ${JSON.stringify(data)}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-        };
+        function conectar_cliente(num_cliente) {
+            if (timers_reconexion[num_cliente]) {
+                clearTimeout(timers_reconexion[num_cliente]);
+            }
+            if (sockets[num_cliente]) {
+                sockets[num_cliente].onclose = null;
+                sockets[num_cliente].close();
+            }
 
-        ws.onclose = function() {
-            estadoSpan.innerText = 'Desconectado';
-            estadoSpan.style.color = 'red';
-            logDiv.innerHTML += '<div class="evento" style="color: red;">[CONEXIÓN CERRADA]</div>';
-        };
+            const base = document.getElementById('url_base').value.replace(/\/$/, '');
+            const id_vehiculo = document.getElementById(`veh_${num_cliente}`).value;
+            const log_div = document.getElementById(`log_${num_cliente}`);
+            const estado_span = document.getElementById(`estado_${num_cliente}`);
+            const url_ws = `${base}/ws/vehiculos/${id_vehiculo}`;
+
+            estado_span.innerText = 'conectando...';
+            estado_span.style.color = 'orange';
+
+            const ws = new WebSocket(url_ws);
+            sockets[num_cliente] = ws;
+
+            ws.onopen = function() {
+                estado_span.innerText = `conectado (${url_ws})`;
+                estado_span.style.color = 'lightgreen';
+                log_div.innerHTML += `<div class="evento" style="color: lightgreen;">[conexion establecida en ${url_ws}]</div>`;
+                log_div.scrollTop = log_div.scrollHeight;
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                let color = '#d4d4d4';
+                if (data.evento === 'estado_inicial') color = '#4ec9b0';
+                else if (data.evento === 'movimiento_individual') color = '#dcdcaa';
+                else if (data.evento === 'demo_inicio') color = '#569cd6';
+                else if (data.evento === 'demo_movimiento') color = '#ce9178';
+                else if (data.evento === 'demo_fin') color = '#b5cea8';
+                else if (data.evento === 'demo_cancelada' || data.evento === 'demo_error') color = '#f44747';
+
+                log_div.innerHTML += `<div class="evento" style="color: ${color};">[${data.timestamp}] <b>${data.evento}</b> => ${JSON.stringify(data)}</div>`;
+                log_div.scrollTop = log_div.scrollHeight;
+            };
+
+            ws.onclose = function() {
+                estado_span.innerText = 'desconectado - reconectando en 3s...';
+                estado_span.style.color = '#f44747';
+                log_div.innerHTML += '<div class="evento" style="color: #f44747;">[conexion cerrada - intentando reconexion automatica...]</div>';
+                log_div.scrollTop = log_div.scrollHeight;
+                timers_reconexion[num_cliente] = setTimeout(() => conectar_cliente(num_cliente), 3000);
+            };
+        }
+
+        function iniciar_conexiones() {
+            conectar_cliente(1);
+            conectar_cliente(2);
+        }
+
+        window.onload = iniciar_conexiones;
     </script>
 </body>
 </html>

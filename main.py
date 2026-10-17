@@ -1,4 +1,7 @@
+from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Header, Depends, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.database import DatabaseConfig, DatabaseConnection
 from app.repositories import StoredProcedureRepository
 from app.websocket_manager import WebSocketManager
@@ -25,9 +28,17 @@ ws_manager = WebSocketManager()
 service = VehiculoIoTService(repository, ws_manager)
 
 app = FastAPI(
-    title="api vehiculo iot - amazon rds",
-    description="api con poo, 21 stored procedures en amazon rds y monitoreo en tiempo real por websocket",
-    version="1.0.0"
+    title="api vehiculo iot - amazon ec2 & rds",
+    description="api publica con poo, 21 stored procedures en amazon rds y monitoreo en tiempo real por wss",
+    version="2.6.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -35,6 +46,22 @@ def verificar_autorizacion(x_api_key: str = Header(default=None)):
     if not x_api_key or x_api_key != config.api_key:
         raise HTTPException(status_code=401, detail="no autorizado: header x-api-key invalido o ausente")
     return True
+
+
+@app.get("/", tags=["salud"], summary="verificar estado del servidor en ec2")
+def estado_servidor():
+    return {
+        "estado": "operativo",
+        "servicio": "api vehiculo iot - examen 2.6",
+        "documentacion": "/docs",
+        "monitor_wss": "/monitor"
+    }
+
+
+@app.get("/monitor", response_class=HTMLResponse, tags=["monitoreo wss"], summary="panel web dual para pruebas de websocket seguro (wss)")
+def obtener_monitor_wss():
+    ruta_html = Path(__file__).parent / "test_ws.html"
+    return HTMLResponse(content=ruta_html.read_text(encoding="utf-8"))
 
 
 # ==================== vehiculos (5 sp) ====================
